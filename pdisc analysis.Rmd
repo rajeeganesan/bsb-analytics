@@ -1,0 +1,212 @@
+---
+title: "bootcamp final project"
+output: html_document
+---
+
+goal: identify a potential correlation between the sabermetric
+clutch statistic and whether or not plate discipline can be 
+utilized as a predictive model to identify a player's clutch.
+
+clutch is a statistic defined by fangraphs to
+compare the player's WPA in high leverage 
+situations to the player's performance
+without any weighting for leverage.
+
+this is to be compared with the disc rating for each player
+that i have calculated from the original statistics. 
+this disc rating uses a form of a z-score to calculate 
+an overall rating of how disciplined a hitter is based on 
+their score in comparison to the MLB average. in this case, 
+a negative disc rating indicates a more disciplined hitter.
+
+to start, i chose to compare the average disc ratings among all
+MLB teams that had eligible players with the following plots.
+
+then, i was able to use each player's disc ratings to identify 
+a potential correlation between disc rating and 1. clutch, 2. BA, 3. WPA, in order
+to attempt to find a potential predictive model, and then combining player's
+disc ratings and finding the relationship with actual wins.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+warning = FALSE
+```
+
+```{r packages}
+#install.packages("dplyr")
+#install.packages("tidyverse")
+#install.packages("pracma")
+library(dplyr)
+library(tidyverse)
+library(baseballr)
+library(ggplot2)
+library(kableExtra)
+library(pracma)
+```
+
+
+```{r data reading}
+# read in data
+setwd("~/carolinabb1")
+pdisc <- read.csv(file = "platedisc.csv", header = TRUE, sep = ",")
+names(pdisc)[1] <- "Name"
+pdiscavg <- read.csv(file = "pdiscavg.csv", header = TRUE, sep = ",")
+full <- read.csv(file = "clutch leaderboard.csv", header = TRUE, sep =",")
+names(full)[1]<-"Name"
+full <- select(full, Name, Team, Clutch, playerid, WPA)
+```
+
+
+```{r percents formatting}
+# format percentages as decimals
+for (i in 3:11){
+  pdisc[,i] = as.numeric(gsub("[\\%,]", "", pdisc[,i]))
+  pdisc[,i] = pdisc[,i]*0.01
+}
+
+for (i in 2:10){
+    pdiscavg[,i] = as.numeric(gsub("[\\%,]", "", pdiscavg[,i]))
+    pdiscavg[,i] = pdiscavg[,i]*0.01
+}
+```
+
+
+```{r standard dev. calc}
+pdisctemp <- c()
+for (i in 3:11){
+  sdtemp <- sd(pdisc[,i])
+  pdisctemp <- c(pdisctemp,sdtemp)
+}
+
+# move values into a csv file
+pdiscsd <- read.csv(file = "pdiscsd.csv", header = TRUE, sep = ",")
+```
+
+
+```{r disc rating}
+# numbers subbed in from the pdiscavg dataset
+pdisc$dRating <- ((pdisc$O.Swing.-.316)/.0595) + ((pdisc$Z.Swing.-.685)/0.0584) + ((pdisc$Swing.- .470)/0.0496) - ((pdisc$O.Contact.-.627)/0.08) - ((pdisc$Z.Contact.-.849)/0.0443) - ((pdisc$Contact.-.762)/0.0529) - ((pdisc$Zone.-.418)/0.0202)+ ((pdisc$F.Strike.-.609)/0.0338)+ ((pdisc$SwStr.-.112)/0.0289)
+
+```
+
+
+```{r creation of dataset}
+
+# creation of dataset with disc ratings
+pdiscRatings <- select(pdisc, Name, Team, dRating, playerid)
+arrange(pdiscRatings,desc(dRating))
+
+# matchup with clutch data from full dataset
+tempclutch <- c()
+tempWPA <- c()
+for(i in 1:135){
+  tempID <- pdiscRatings[i,4]
+  for (j in 1:135){
+    if (full[j,4] == tempID){
+      tempclutch <- c(tempclutch,full[j,3])
+      tempWPA <- c(tempWPA, full[j,5])
+    } else {
+      next
+    }
+  }
+}
+
+# creating new pretty dataset with disc ratings and clutch values
+pdiscRatings$clutch <- tempclutch
+pdiscRatings$WPA <- tempWPA
+```
+
+```{r average addition}
+# creation of dataset with disc ratings
+avg <- read.csv(file = "averageData.csv", header = TRUE, sep = ",")
+
+# matchup with average data from secondary dataset
+tempBA <- c()
+for(i in 1:135){
+  tempID <- pdiscRatings[i,4]
+  for (j in 1:135){
+    if (avg[j,23] == tempID){
+      tempBA <- c(tempBA,avg[j,22])
+    } else {
+      next
+    }
+  }
+}
+
+pdiscRatings$BA <- tempBA
+```
+
+```{r BA vs. Disc}
+options(scipen = 999)
+data("pdiscRatings", package = "ggplot2")
+theme_set(theme_bw())
+theme_update(plot.title = element_text(hjust = 0.5))
+ggplot(data = pdiscRatings, mapping = aes(x = dRating, y= BA)) + geom_point() + geom_smooth(method = "loess", se = F) + labs(title = "Disc Rating vs. BA of Individual Players", x = "Disc Rating", y = "BA")
+powerMod <- lm(BA~dRating, data = pdiscRatings)
+summary(powerMod)
+
+```
+
+
+```{r comparison between drating & clutch}
+options(scipen = 999)
+data("pdiscRatings", package = "ggplot2")
+theme_set(theme_bw())
+theme_update(plot.title = element_text(hjust = 0.5))
+ggplot(data = pdiscRatings, mapping = aes(x = dRating, y= clutch)) + geom_point() + geom_smooth(method = "loess", se = F) + labs(title = "Disc Rating vs. Clutch of Individual Players", x = "Disc Rating", y = "Clutch")
+powerMod <- lm(clutch~dRating, data = pdiscRatings)
+summary(powerMod)
+```
+
+
+```{r comparison of WPA vs. Disc Rating}
+options(scipen = 999)
+data("pdiscRatings", package = "ggplot2")
+theme_set(theme_bw())
+theme_update(plot.title = element_text(hjust = 0.5))
+ggplot(data = pdiscRatings, mapping = aes(y = WPA, x= dRating)) + geom_point() + geom_smooth(method = "loess", se = F) + labs(title = "Disc Rating vs. WPA of Individual Players", x = "Disc Rating", y = "WPA")
+powerMod <- lm(WPA~dRating, data = pdiscRatings)
+summary(powerMod)
+```
+
+```{r comparison of WPA vs. Clutch}
+options(scipen = 999)
+data("pdiscRatings", package = "ggplot2")
+theme_set(theme_bw())
+ggplot(data = pdiscRatings, mapping = aes(x = clutch, y= WPA)) + geom_point() + geom_smooth(method = "loess", se = F) + labs(title = "Disc Rating vs. Clutch of Individual Players", y = "WPA", x = "Clutch")
+powerMod <- lm(WPA~clutch, data = pdiscRatings)
+summary(powerMod)
+```
+
+
+```{r}
+teamData <- read.csv(file = "teamData.csv", header = TRUE, sep = ",")
+names(teamData)[1]<-"Name"
+updTeam <- select(teamData,Name,W)
+
+
+combdRatings <- read.csv(file = "combDratings.csv", header = TRUE, sep = ",")
+updTeam[,3] <- combdRatings$combined
+```
+
+```{r combined disc vs. total wins}
+options(scipen = 999)
+data("updTeam", package = "ggplot2")
+theme_set(theme_bw())
+theme_update(plot.title = element_text(hjust = 0.5))
+p <- ggplot(data = updTeam, mapping = aes(y = W, x= V3)) + geom_point() + geom_smooth(method = "loess", se = F) + labs(title = "Combined Disc Ratings vs. Wins", x = "Disc Ratings", y = "Wins")
+
+p + theme(
+  panel.background = element_rect(fill = "lightblue",
+                                colour = "lightblue",
+                                size = 0.5, linetype = "solid"),
+  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                colour = "white"), 
+  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "white")
+  )
+
+powerMod <- lm(V3~W, data = updTeam)
+summary(powerMod)
+```
+

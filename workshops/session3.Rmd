@@ -1,0 +1,133 @@
+---
+title: "session2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r package setup}
+install.packages("devtools")
+devtools::install_github("BillPetti/baseballr")
+# require(baseballr)
+install.packages("kableExtra")
+```
+
+
+```{r load in packages}
+library(baseballr)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+```
+
+```{r pitcher data}
+pitcherData <- scrape_statcast_savant_pitcher_all("2019-04-01", "2019-04-08")
+head(pitcherData)
+```
+
+```{r singular pitcher info}
+cole <- pitcherData %>% filter(player_name == "Gerrit Cole")
+cole[1,8]
+
+coleAll2019 <-  scrape_statcast_savant_pitcher_all("2019-04-01", "2019-09-30", playerid = 543037)
+head(coleAll2019)
+```
+
+focus:
+*pitch_type (col1)
+*release_speed (col3)
+*release_spin_rate (col57)
+*pitch_name (col79)
+
+```{r cole pitch data}
+cole2019 <- coleAll2019[,c(1,3,57,79)]
+head(cole2019)
+
+# removes missing entries
+cole2019 <- na.omit(cole2019)
+
+# view variations of a variable
+unique(cole2019$pitch_type)
+unique(cole2019$pitch_name)
+```
+
+controlF to replace namings (easy fix to switch pitchers)
+
+```{r pitch averages}
+# calculates averages for each of the pitches (FF, KC, CH)
+
+cole2019FF <- cole2019 %>% filter(pitch_type == "FF")
+  meanFFSpin <- round(mean(cole2019FF$release_spin_rate),2)
+  meanFFRel <- round(mean(cole2019FF$release_speed),2)
+  meanFFSpin
+  meanFFRel
+  
+cole2019KC = cole2019 %>% filter(pitch_type == "KC")
+  meanKCSpin <- round(mean(cole2019KC$release_spin_rate),2)
+  meanKCRel <- round(mean(cole2019KC$release_speed),2)
+  meanKCSpin
+  meanKCRel
+  
+cole2019CH = cole2019 %>% filter(pitch_type == "CH")
+  meanCHSpin <- round(mean(cole2019CH$release_spin_rate),2)
+  meanCHRel <- round(mean(cole2019CH$release_speed),2)
+  meanCHSpin
+  meanCHSpin
+  
+cole2019SL = cole2019 %>% filter(pitch_type == "SL")
+  meanSLSpin <- round(mean(cole2019SL$release_spin_rate),2)
+  meanSLRel <- round(mean(cole2019SL$release_speed),2)
+  meanSLSpin
+  meanSLSpin
+  
+cole2019FT = cole2019 %>% filter(pitch_type == "FT")
+  meanFTSpin <- round(mean(cole2019FT$release_spin_rate),2)
+  meanFTRel <- round(mean(cole2019FT$release_speed),2)
+  meanFTSpin
+  meanFTSpin
+```
+
+
+```{r table organization}
+pitches <- c(unique(cole2019$pitch_name))
+pitches
+
+spins <- c(meanFFSpin, meanKCSpin, meanCHSpin, meanSLSpin, meanFTSpin)
+spins
+
+releaseSpeed <- c(meanFFRel, meanKCRel, meanCHRel, meanSLRel, meanFTRel)
+releaseSpeed
+
+avgTable <- data.frame(pitches, spins, releaseSpeed)
+avgTable
+
+```
+
+
+```{r data vis}
+ggplot(data = avgTable, aes(x=pitches, y= spins)) + geom_bar(stat = "identity")
+
+kable(avgTable, caption = "gerrit cole's average spin rate & release speed")
+```
+
+use ggplot for aesthetic purposes
+
+```{r aesthetics}
+ggplot(data = avgTable, aes(x= pitches, y = spins) )+ geom_bar(stat = "identity")
+  geom_label(aes(x=pitches, y = spins, label = ReleaseSpeed), hjust = .5, vjust = 0, colour = "black", fill = NA, label.size = NA, family = "Helvetica", size = 4)
+  xlab("pitch type")
+  ylab("spin rate(rpm)")
+  ggtitle("gerrit cole average spin rate & release speed")
+  coord_cartesian(ylim = c(0,3200))
+
+kable(avgTable, caption = "gerrit cole") %>% kable_styling(c("striped", "bordered"))
+```
+
+look into:
+ifelse(data == "lookingfor", 1, 0)
+
+
+
+

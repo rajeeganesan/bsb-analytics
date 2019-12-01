@@ -1,0 +1,61 @@
+---
+title: "intro to r"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#install.packages("readr")
+library(readr)
+# set carolina baseball working directory
+leaderboard <- read.csv(file = "data.csv", header = TRUE, sep = ",")
+attach(leaderboard)
+setwd("~/carolinabb1")
+```
+
+```{r}
+#install.packages("dplyr")
+#install.packages("tidyverse")
+library(dplyr)
+library(tidyverse)
+```
+
+```{r}
+rockiesLeaders <- leaderboard %>% filter(leaderboard$Team == "Rockies")
+
+notRockiesLeaders <- leaderboard %>% filter(leaderboard$Team != "Rockies") %>% arrange(desc(RBI))
+notRockiesLeaders
+```
+
+```{r}
+notRockiesLeaders$rajStat <- notRockiesLeaders$SLG-notRockiesLeaders$AVG
+
+notRockiesLeaders %>% select(Name, wOBA, everything()) %>% arrange(desc(rajStat))
+```
+
+```{r}
+pitchers19 <- read.csv(file = "pitchersdata.csv", header = TRUE, sep = ",")
+
+pitchers18 = read.csv(file = "pitchers2018.csv", header = TRUE, sep = ",")
+
+#pitchers <- rbind(pitchers19, pitchers18)
+#pitchers%>%group_by(Name)%>%summarise(mean(W),mean(L))
+```
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+ggplot(data = leaderboard, mapping = aes(x = ISO, y= HR))+ geom_point()
+```
+
+```{r}
+powerMod <- lm(HR~ISO+RBI, data = leaderboard)
+summary(powerMod)
+```
+
+
+
+

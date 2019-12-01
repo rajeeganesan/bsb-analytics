@@ -1,0 +1,25 @@
+---
+title: "rajeestat"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r rajeestat}
+# library reqs
+library(dplyr)
+library(tidyverse)
+
+# set working directory to directly read data file
+leaderboard <- read.csv(file = "data.csv", header = TRUE, sep = ",")
+
+# data cleaning- removes percentage sign & adjusts to a numeric decimal
+leaderboard$K. = as.numeric(gsub("[\\%,]", "", leaderboard$K.))
+leaderboard$K. = leaderboard$K.*0.01
+
+# production of new statistic & view
+leaderboard$rajeeStat <- leaderboard$wOBA-leaderboard$K.
+leaderboard %>% select(Name, Team, rajeeStat, wOBA, K.) %>% arrange(desc(rajeeStat))
+```
